@@ -23,3 +23,8 @@ Thumbs.db
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Blueprints & Documents
+*.docx
+JARVIS_Blueprint_v2.docx
+
