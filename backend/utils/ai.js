@@ -152,6 +152,33 @@ export const cleanTextResponse = (text) => {
   return text.replace(/\[MEMORY:.*?\]/g, "").trim();
 };
 
+// Helper: Verify URLs in text. If dead, remove them and append a warning.
+export const verifyLinks = async (text) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const urls = text.match(urlRegex);
+  if (!urls || urls.length === 0) return text;
+
+  let verifiedText = text;
+  for (let url of urls) {
+    try {
+      // Clean trailing punctuation
+      url = url.replace(/[.,;!"')\]]$/, '');
+      
+      const response = await fetch(url, { method: 'HEAD', timeout: 3500 });
+      // 404 or >=500 means dead. (403/405 could just be anti-bot blocks to HEAD requests)
+      if (response.status === 404 || response.status >= 500) {
+        verifiedText = verifiedText.replace(url, "");
+        verifiedText += " (Note: The link I originally found was dead upon verification, so I aborted the tab opening.)";
+      }
+    } catch (err) {
+      // DNS failure or timeout
+      verifiedText = verifiedText.replace(url, "");
+      verifiedText += " (Note: The link I originally found was unreachable upon verification, so I aborted the tab opening.)";
+    }
+  }
+  return verifiedText.trim();
+};
+
 // Helper: Summarize a conversation session
 export const generateSummary = async (conversationLog) => {
   const summaryInstruction =

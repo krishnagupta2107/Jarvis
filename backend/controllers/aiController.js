@@ -1,7 +1,7 @@
 import User from "../models/User.js";
 import Memory from "../models/Memory.js";
 import Session from "../models/Session.js";
-import { callAI, extractMemories, cleanTextResponse } from "../utils/ai.js";
+import { callAI, extractMemories, cleanTextResponse, verifyLinks } from "../utils/ai.js";
 
 // Helper: Compile system prompt incorporating date/time context, profile, and memories
 const buildSystemPrompt = (profile, memories, sessionSummaries) => {
@@ -130,9 +130,12 @@ export const handleChat = async (req, res) => {
     }
 
     // 7. Clean annotations from the response
-    const cleanedResponse = cleanTextResponse(result.text);
+    let cleanedResponse = cleanTextResponse(result.text);
 
-    // 8. Update database session logs
+    // 8. Verify any links before returning to frontend
+    cleanedResponse = await verifyLinks(cleanedResponse);
+
+    // 9. Update database session logs
     session.messages.push({
       role: "user",
       content: command.trim(),
