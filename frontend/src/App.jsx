@@ -88,7 +88,15 @@ function App() {
     if (preferredVoice) utterance.voice = preferredVoice;
 
     utterance.onstart = () => setAiState('speaking');
-    utterance.onend = () => setAiState('standby');
+    utterance.onend = () => {
+      setAiState('standby');
+      // Auto-restart microphone for continuous conversation
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) { /* already started */ }
+      }
+    };
     
     synthRef.current.speak(utterance);
   };
@@ -112,18 +120,24 @@ function App() {
       
       const responseText = data.text || "I encountered an error processing that.";
       setCurrentMessage({ text: responseText, sender: 'jarvis' });
-      speakText(responseText);
+      
+      // Clean URLs from spoken text so Jarvis doesn't read out full links
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const spokenText = responseText.replace(urlRegex, '').trim();
+      speakText(spokenText || "Opening that for you now, Sir.");
       
       // Auto-open valid links for smart research
-      const urlRegex = /(https?:\/\/[^\s]+)/g;
       const urls = responseText.match(urlRegex);
+      let newTab = null;
+      
       if (urls && urls.length > 0) {
-        // Open the first URL found automatically
-        window.open(urls[0], '_blank');
-      } else if (commandText.toLowerCase().includes('search') || commandText.toLowerCase().includes('find')) {
-        // If it's a search command but no direct URL was returned, we can open a Google search as fallback
-        const query = encodeURIComponent(commandText.replace(/jarvis,? /i, ''));
-        window.open(`https://www.google.com/search?q=${query}`, '_blank');
+        newTab = window.open(urls[0], '_blank');
+      }
+
+      if (newTab === null && urls && urls.length > 0) {
+        const blockMsg = "Sir, your browser is blocking my ability to open new tabs. Please allow popups in your address bar.";
+        setCurrentMessage({ text: blockMsg, sender: 'jarvis' });
+        speakText(blockMsg);
       }
 
     } catch (err) {
