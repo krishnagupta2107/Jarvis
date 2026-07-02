@@ -52,9 +52,13 @@ function App() {
     };
 
     recognition.onerror = (event) => {
-      if (event.error === 'no-speech') return; // ignore silent timeouts
       console.error('Speech error:', event.error);
-      setAiState('standby');
+      if (event.error === 'no-speech') {
+        setAiState('standby');
+        return;
+      }
+      setCurrentMessage({ text: `MIC ERROR: ${event.error.toUpperCase()}`, sender: 'jarvis' });
+      setAiState('error');
     };
 
     recognition.onend = () => {
@@ -86,7 +90,11 @@ function App() {
   };
 
   const processCommand = async (commandText) => {
-    if (!sessionId) return;
+    if (!sessionId) {
+      setCurrentMessage({ text: 'SYSTEM ERROR: NO SESSION ID. BACKEND CONNECTION FAILED.', sender: 'jarvis' });
+      setAiState('error');
+      return;
+    }
     setAiState('processing');
 
     try {
@@ -155,11 +163,11 @@ function App() {
           {currentMessage.text}
         </div>
 
-        {/* Hidden input for keyboard fallback */}
+        {/* Visible input for debugging/fallback */}
         <input 
           type="text" 
-          className="hidden-input" 
-          aria-hidden="true" 
+          className="command-input glow-text" 
+          placeholder="[ TYPE COMMAND HERE ]"
           onKeyDown={handleManualInput} 
           autoFocus 
         />
