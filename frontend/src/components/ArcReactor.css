@@ -1,0 +1,89 @@
+.arc-reactor-container {
+  position: relative;
+  width: 250px;
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  transition: all 0.5s ease;
+}
+
+/* Colors based on state */
+.standby { --arc-color: var(--cyan); }
+.listening { --arc-color: var(--green); }
+.processing { --arc-color: var(--cyan); }
+.speaking { --arc-color: var(--gold); }
+.error { --arc-color: var(--red); }
+
+.arc-core {
+  width: 80px;
+  height: 80px;
+  background-color: var(--arc-color);
+  border-radius: 50%;
+  box-shadow: 0 0 30px var(--arc-color), 0 0 60px var(--arc-color);
+  z-index: 10;
+  transition: background-color 0.5s ease, box-shadow 0.5s ease;
+}
+
+.listening .arc-core {
+  animation: pulse-core 0.5s infinite alternate;
+}
+.speaking .arc-core {
+  animation: pulse-core 1.5s infinite alternate;
+}
+.error .arc-core {
+  animation: pulse-core 0.3s infinite alternate;
+}
+
+.arc-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--arc-color);
+  border-bottom-color: var(--arc-color);
+  opacity: 0.6;
+  transition: border-color 0.5s ease;
+}
+
+.ring-1 {
+  width: 140px;
+  height: 140px;
+  animation: spin 10s linear infinite;
+}
+
+.ring-2 {
+  width: 190px;
+  height: 190px;
+  border-left-color: var(--arc-color);
+  border-right-color: transparent;
+  animation: spin-reverse 15s linear infinite;
+  opacity: 0.3;
+}
+
+.ring-3 {
+  width: 240px;
+  height: 240px;
+  border: 1px dashed var(--arc-color);
+  animation: spin 30s linear infinite;
+  opacity: 0.2;
+}
+
+.processing .ring-1, .processing .ring-2 {
+  animation-duration: 2s;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes spin-reverse {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes pulse-core {
+  0% { box-shadow: 0 0 20px var(--arc-color), 0 0 40px var(--arc-color); }
+  100% { box-shadow: 0 0 60px var(--arc-color), 0 0 120px var(--arc-color); }
+}
