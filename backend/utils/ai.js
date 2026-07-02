@@ -3,11 +3,15 @@ import fetch from "node-fetch"; // Node 18+ has global fetch, but we can import 
 const GEMINI_MODEL = "gemini-2.0-flash";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
-// Call Google Gemini API (supporting Grounding Search Tool)
 const callGemini = async (messages, systemPrompt, useSearch = true) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("Gemini API key is not configured in .env");
+  const keys = [
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY_BACKUP1,
+    process.env.GEMINI_API_KEY_BACKUP2,
+  ].filter(Boolean);
+
+  if (keys.length === 0) {
+    throw new Error("No Gemini API keys are configured in .env");
   }
 
   // Map messages to Gemini structure
@@ -33,23 +37,34 @@ const callGemini = async (messages, systemPrompt, useSearch = true) => {
     body.tools = tools;
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  let lastError = null;
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData?.error?.message || `Gemini HTTP error ${response.status}`);
+  for (const apiKey of keys) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.error?.message || `Gemini HTTP error ${response.status}`);
+      }
+
+      const data = await response.json();
+      const parts = data?.candidates?.[0]?.content?.parts || [];
+      return parts.map((p) => p.text || "").join("").trim();
+    } catch (error) {
+      console.warn(`[AI WARNING] Gemini key failed: ${error.message}. Trying next key...`);
+      lastError = error;
+    }
   }
 
-  const data = await response.json();
-  const parts = data?.candidates?.[0]?.content?.parts || [];
-  return parts.map((p) => p.text || "").join("").trim();
+  throw lastError;
 };
 
 // Call Groq API (fallback helper)
