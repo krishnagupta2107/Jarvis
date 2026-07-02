@@ -46,6 +46,10 @@ function App() {
       recognition.interimResults = false;
       recognition.lang = 'en-IN'; // Uses Indian English to support English and Hinglish (Latin script)
 
+      recognition.onstart = () => {
+        setAiState('listening');
+      };
+
       recognition.onresult = async (event) => {
         const transcript = event.results[0][0].transcript;
         setCurrentMessage({ text: transcript.toUpperCase(), sender: 'user' });
