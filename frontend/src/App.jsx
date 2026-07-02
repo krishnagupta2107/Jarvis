@@ -9,6 +9,7 @@ function App() {
   const [aiState, setAiState] = useState('standby'); // standby, listening, processing, speaking, error
   const [currentMessage, setCurrentMessage] = useState({ text: 'J.A.R.V.I.S. ONLINE. AWAITING INPUT.', sender: 'jarvis' });
   const [sessionId, setSessionId] = useState(null);
+  const sessionIdRef = useRef(null);
   const recognitionRef = useRef(null);
   const synthRef = useRef(window.speechSynthesis);
 
@@ -18,7 +19,10 @@ function App() {
       try {
         const res = await fetch(`${API_BASE}/api/sessions`, { method: 'POST' });
         const data = await res.json();
-        if (data.sessionId) setSessionId(data.sessionId);
+        if (data.sessionId) {
+          setSessionId(data.sessionId);
+          sessionIdRef.current = data.sessionId;
+        }
       } catch (err) {
         console.error('Session init failed:', err);
         setAiState('error');
@@ -90,7 +94,8 @@ function App() {
   };
 
   const processCommand = async (commandText) => {
-    if (!sessionId) {
+    const currentSessionId = sessionIdRef.current;
+    if (!currentSessionId) {
       setCurrentMessage({ text: 'SYSTEM ERROR: NO SESSION ID. BACKEND CONNECTION FAILED.', sender: 'jarvis' });
       setAiState('error');
       return;
@@ -101,7 +106,7 @@ function App() {
       const res = await fetch(`${API_BASE}/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, command: commandText })
+        body: JSON.stringify({ sessionId: currentSessionId, command: commandText })
       });
       const data = await res.json();
       
