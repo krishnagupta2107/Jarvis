@@ -30,61 +30,68 @@ function App() {
       }
     };
     initSession();
-    setupSpeechRecognition();
+    // Speech Recognition
   }, []);
 
-  const setupSpeechRecognition = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.warn("Speech recognition not supported in this browser.");
-      return;
-    }
-    
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-
-    recognition.onstart = () => {
-      setAiState('listening');
-    };
-
-    recognition.onresult = async (event) => {
-      const transcript = event.results[0][0].transcript;
-      setCurrentMessage({ text: transcript.toUpperCase(), sender: 'user' });
-      await processCommand(transcript);
-    };
-
-    recognition.onerror = (event) => {
-      console.error('Speech error:', event.error);
-      if (event.error === 'no-speech') {
-        setAiState('standby');
+  useEffect(() => {
+    const setupSpeechRecognition = () => {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        console.warn("Speech Recognition API not supported in this browser.");
         return;
       }
-      setCurrentMessage({ text: `MIC ERROR: ${event.error.toUpperCase()}`, sender: 'jarvis' });
-      setAiState('error');
+      
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'hi-IN'; // Google's hi-IN engine flawlessly processes both Hindi and English
+
+      recognition.onresult = async (event) => {
+        const transcript = event.results[0][0].transcript;
+        setCurrentMessage({ text: transcript.toUpperCase(), sender: 'user' });
+        await processCommand(transcript);
+      };
+
+      recognition.onerror = (event) => {
+        if (event.error !== 'no-speech') {
+          console.error("Speech recognition error:", event.error);
+          setAiState('error');
+        } else {
+          setAiState('standby');
+        }
+      };
+
+      recognition.onend = () => {
+        if (aiState === 'listening') setAiState('standby');
+      };
+
+      recognitionRef.current = recognition;
     };
 
-    recognition.onend = () => {
-      if (aiState === 'listening') {
-        setAiState('standby');
-      }
-    };
-
-    recognitionRef.current = recognition;
-  };
+    setupSpeechRecognition();
+  }, []); // Run once on mount
 
   const speakText = (text) => {
-    if (synthRef.current.speaking) {
-      synthRef.current.cancel();
-    }
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.92;
-    utterance.pitch = 0.85;
+    if (!synthRef.current) return;
+    
+    synthRef.current.cancel();
 
-    // Try to find a UK male voice if possible
+    const utterance = new SpeechSynthesisUtterance(text);
     const voices = synthRef.current.getVoices();
-    const preferredVoice = voices.find(v => v.lang.includes('en-GB') || v.name.includes('Google UK English Male'));
+    
+    // Auto-detect Hindi script to switch TTS voice engine dynamically
+    const hasHindi = /[\u0900-\u097F]/.test(text);
+    
+    let preferredVoice;
+    if (hasHindi) {
+      preferredVoice = voices.find(voice => voice.lang.startsWith('hi'));
+    } else {
+      preferredVoice = voices.find(voice => 
+        voice.name.includes('Google UK English Male') || 
+        voice.name.includes('Great Britain')
+      );
+    }
+    
     if (preferredVoice) utterance.voice = preferredVoice;
 
     utterance.onstart = () => setAiState('speaking');
