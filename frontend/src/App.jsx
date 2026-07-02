@@ -44,7 +44,7 @@ function App() {
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = false;
-      recognition.lang = 'hi-IN'; // Google's hi-IN engine flawlessly processes both Hindi and English
+      recognition.lang = 'en-IN'; // Uses Indian English to support English and Hinglish (Latin script)
 
       recognition.onresult = async (event) => {
         const transcript = event.results[0][0].transcript;
